@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { IsArray, IsNumber } from 'class-validator';
 import { Document } from 'mongoose';
 
 export type ProductDocument = Product & Document;
@@ -22,10 +23,10 @@ export class Product {
     en: string;
   };
 
-  @Prop({ type: Number })
+  @IsNumber()
   calories: number;
 
-  @Prop({ type: [String] })
+  @IsArray()
   groupBloodNotAllowed: string[];
 }
 
