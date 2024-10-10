@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { UserData, UserDataSchema } from './user-data.schema';
 
 export type UserDocument = User & Document;
 
@@ -30,26 +31,8 @@ export class User {
   @Prop({ default: null })
   token: string;
 
-  @Prop({
-    type: {
-      currentWeight: { type: Number, default: null },
-      height: { type: Number, default: null },
-      age: { type: Number, default: null },
-      desiredWeight: { type: Number, default: null },
-      bloodType: { type: Number, enum: [1, 2, 3, 4], default: null },
-      dailyRate: { type: Number, default: null },
-      bannedProducts: { type: Array, default: [] },
-    },
-  })
-  userData: {
-    currentWeight: number;
-    height: number;
-    age: number;
-    desiredWeight: number;
-    bloodType: number;
-    dailyRate: number;
-    bannedProducts: string[];
-  };
+  @Prop({ type: UserDataSchema, default: () => ({}) })
+  userData: UserData;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

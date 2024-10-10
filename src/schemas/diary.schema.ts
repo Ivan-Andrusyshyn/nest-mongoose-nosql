@@ -12,9 +12,14 @@ import { Type } from 'class-transformer';
 
 export type DiaryDocument = Diary & Document;
 
+class Title {
+  @IsString()
+  en: string;
+}
+
 @Schema({ versionKey: false })
 export class Diary {
-  @Prop({ type: String, default: Date.now })
+  @Prop({ type: String, default: () => new Date().toISOString() })
   @IsDateString()
   date: string;
 
@@ -62,12 +67,6 @@ class ConsumedProduct {
   @IsNumber()
   @IsNotEmpty()
   kcal: number;
-}
-
-class Title {
-  @IsString()
-  @IsString()
-  en: string;
 }
 
 export const DiarySchema = SchemaFactory.createForClass(Diary);
