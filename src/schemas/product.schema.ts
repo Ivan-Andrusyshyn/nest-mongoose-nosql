@@ -27,7 +27,7 @@ export class Product {
   calories: number;
 
   @IsArray()
-  groupBloodNotAllowed: string[];
+  groupBloodNotAllowed: number[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

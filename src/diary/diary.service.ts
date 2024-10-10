@@ -27,11 +27,11 @@ export class DiaryService {
     createDiaryDto: CreateDiaryDto,
   ): Promise<DiaryDocument> {
     const { consumedProducts } = createDiaryDto;
-
-    const diaryEntry = await this.diaryModel.findOne({ owner: userId, date });
-    if (!diaryEntry) {
-      throw new NotFoundException('Diary entry not found for the given date');
+    if (!userId) {
+      throw new NotFoundException('Please check userId!');
     }
+    const diaryEntry = await this.createNewDate(userId, date);
+
     consumedProducts.forEach((product: ConsumedProductDto) => {
       const existingProduct = diaryEntry.consumedProducts.find(
         (p) => p._id === product._id,
