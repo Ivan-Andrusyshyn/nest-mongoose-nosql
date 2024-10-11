@@ -4,7 +4,7 @@ import { UserData, UserDataSchema } from './user-data.schema';
 
 export type UserDocument = User & Document;
 
-@Schema({ timestamps: true, versionKey: false })
+@Schema({ timestamps: true, versionKey: false, collection: 'users' })
 export class User {
   @Prop({
     required: [true, 'Password is required'],

@@ -1,26 +1,25 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsNumber,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
-import { TitleDto } from './title.dto';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsString, IsNotEmpty } from 'class-validator';
 
 export class ConsumedProductDto {
+  @ApiProperty({ example: 'product1_id', description: 'ID of the product' })
   @IsString()
   @IsNotEmpty()
   _id: string;
 
-  @ValidateNested()
-  @Type(() => TitleDto)
-  title: TitleDto;
+  @ApiProperty({
+    example: { en: 'Apple' },
+    description: 'Title of the product',
+  })
+  title: {
+    en: string;
+  };
 
+  @ApiProperty({ example: 150, description: 'Weight of the product in grams' })
   @IsNumber()
-  @IsNotEmpty()
   weight: number;
 
+  @ApiProperty({ example: 80, description: 'Kcal of the product' })
   @IsNumber()
-  @IsNotEmpty()
   kcal: number;
 }

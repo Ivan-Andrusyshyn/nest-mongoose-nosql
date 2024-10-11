@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 
 export type ProductDocument = Product & Document;
 
-@Schema({ versionKey: false, timestamps: true })
+@Schema({ versionKey: false, timestamps: true, collection: 'products' })
 export class Product {
   @Prop({ type: [String] })
   categories: string[];

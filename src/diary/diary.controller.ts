@@ -1,93 +1,120 @@
+import { Controller, Get, Post, Delete, Param, Body } from '@nestjs/common';
 import {
-  Controller,
-  Post,
-  Body,
-  Req,
-  Res,
-  Get,
-  Query,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
-import { AuthGuard } from 'src/common/auth.guard';
-import { Request, Response } from 'express';
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 
 import { DiaryService } from './diary.service';
 import { CreateDiaryDto } from './dto/create-diary.dto';
-import { RemoveProductDto } from './dto/remove-product.dto';
-import { UserDocument } from 'src/schemas/user.schema';
+import { Types } from 'mongoose';
+import { DeleteDayDto } from './dto/delete-day.dto';
 
+@ApiTags('Diary')
 @Controller('diary')
 export class DiaryController {
   constructor(private readonly diaryService: DiaryService) {}
 
-  @Post('add')
-  @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  async addProduct(
-    @Req() req: Request,
-    @Body() createDiaryDto: CreateDiaryDto,
-    @Res() res: Response,
+  @Get(':userId/:date')
+  @ApiOperation({ summary: 'Get diary entry for a specific date and user' })
+  @ApiParam({
+    name: 'date',
+    required: true,
+    description: 'The date of the diary entry (example 2024-10-10)',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
+  @ApiResponse({ status: 200, description: 'Diary entry found' })
+  @ApiResponse({ status: 404, description: 'Diary entry not found' })
+  async getInfoPerDate(
+    @Param('userId') userId: string,
+    @Param('date') date: string,
   ) {
-    const userId = (req.user as UserDocument)._id.toString();
+    return await this.diaryService.getInfoPerDate(
+      new Types.ObjectId(userId),
+      date,
+    );
+  }
 
-    const { date } = req.query;
+  @Delete('diary-day')
+  async deleteDiaryDay(@Body() deleteDayDto: DeleteDayDto) {
+    return await this.diaryService.deleteDiaryDay(deleteDayDto);
+  }
 
-    const newProduct = await this.diaryService.addProduct(
-      userId,
-      date as string,
+  @ApiOperation({
+    summary: 'Add a new product to the diary for a specific date and user',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
+  @ApiParam({
+    name: 'date',
+    required: true,
+    description: 'The date of the diary entry',
+  })
+  @ApiBody({ type: CreateDiaryDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Product successfully added to diary',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Diary entry not found for the user and date',
+  })
+  @Post(':userId/:date')
+  async addProduct(
+    @Param('userId') userId: string,
+    @Param('date') date: string,
+    @Body() createDiaryDto: CreateDiaryDto,
+  ) {
+    return await this.diaryService.addProduct(
+      new Types.ObjectId(userId),
+      date,
       createDiaryDto,
     );
-    return res.status(HttpStatus.CREATED).json({
-      status: 'success',
-      code: HttpStatus.CREATED,
-      data: newProduct,
-    });
   }
 
-  @Get()
-  @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.OK)
-  async getInfoPerDate(
-    @Req() req: Request,
-    @Query('date') date: string,
-    @Res() res: Response,
-  ) {
-    const userId = (req.user as UserDocument)._id;
-
-    const diaryEntry = await this.diaryService.getInfoPerDate(userId, date);
-
-    return res.status(HttpStatus.OK).json({
-      status: 'success',
-      code: HttpStatus.OK,
-      data: diaryEntry,
-    });
-  }
-
-  @Delete('remove')
-  @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a product from the diary entry' })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'The ID of the user',
+  })
+  @ApiParam({
+    name: 'date',
+    required: true,
+    description: 'The date of the diary entry (example 2024-10-10)',
+  })
+  @ApiParam({
+    name: 'productId',
+    required: true,
+    description: 'The ID of the product',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Product removed from the diary entry',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Diary entry or product not found',
+  })
+  @Delete(':userId/:date/:productId')
   async removeProduct(
-    @Req() req: Request,
-    @Query() removeProductDto: RemoveProductDto,
-    @Res() res: Response,
+    @Param('userId') userId: string,
+    @Param('date') date: string,
+    @Param('productId') productId: string,
   ) {
-    const userId = (req.user as UserDocument)._id;
-
-    const { productId, date } = removeProductDto;
-
-    const removedProduct = await this.diaryService.removeProduct(
-      userId,
+    return await this.diaryService.removeProduct(
+      new Types.ObjectId(userId),
       productId,
       date,
     );
-    return res.status(HttpStatus.OK).json({
-      message: 'Product was deleted',
-      status: 'success',
-      code: HttpStatus.OK,
-      data: removedProduct,
-    });
   }
 }

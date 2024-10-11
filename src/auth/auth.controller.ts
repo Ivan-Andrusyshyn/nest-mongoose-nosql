@@ -1,38 +1,41 @@
-import {
-  Controller,
-  Post,
-  UseGuards,
-  Body,
-  ValidationPipe,
-} from '@nestjs/common';
-
-import { User } from 'src/schemas/user.schema';
-import { AuthGuard, AuthUser } from 'src/common';
+import { Controller, Post, Body, HttpCode } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
 import { UserDto } from 'src/user/dto/user.dto';
 import { LoginCredentialsDto } from './dto/login-creditials.dto';
-import { AuthService } from './auth.service';
 
+@ApiTags('Authorization')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('/signup')
-  signUp(
-    @Body(ValidationPipe) user: UserDto,
-  ): Promise<{ user: UserDto; token: string }> {
-    return this.authService.signUp(user);
+  @Post('signup')
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+    type: UserDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid data or user already exists',
+  })
+  @ApiBody({ description: 'User data for registration', type: UserDto })
+  async signUp(@Body() registerCredentialsDto: UserDto) {
+    return this.authService.signUp(registerCredentialsDto);
   }
 
-  @Post('/signin')
-  signIn(
-    @Body(ValidationPipe) loginCredentialsDto: LoginCredentialsDto,
-  ): Promise<{ token: string }> {
+  @Post('signin')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({
+    status: 200,
+    description: 'User successfully logged in',
+    type: UserDto,
+  })
+  @ApiResponse({ status: 400, description: 'Invalid login credentials' })
+  @ApiBody({ description: 'Login credentials', type: LoginCredentialsDto })
+  async signIn(@Body() loginCredentialsDto: LoginCredentialsDto) {
     return this.authService.signIn(loginCredentialsDto);
-  }
-
-  @Post('/authenticated')
-  @UseGuards(AuthGuard)
-  getAuthenticatedUser(@AuthUser() user: User): any {
-    return this.authService.getAuthenticatedUser(user);
   }
 }

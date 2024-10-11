@@ -17,7 +17,7 @@ class Title {
   en: string;
 }
 
-@Schema({ versionKey: false })
+@Schema({ versionKey: false, collection: 'diary' })
 export class Diary {
   @Prop({ type: String, default: () => new Date().toISOString() })
   @IsDateString()
@@ -25,7 +25,7 @@ export class Diary {
 
   @Prop({ type: Types.ObjectId, ref: 'user', required: true })
   @IsNotEmpty()
-  owner: Types.ObjectId;
+  owner: string;
 
   @Prop({
     type: [

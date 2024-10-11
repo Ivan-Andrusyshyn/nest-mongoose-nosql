@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+
 import { Diary, DiaryDocument } from 'src/schemas/diary.schema';
-import { Types } from 'mongoose';
 import { ConsumedProductDto } from './dto/consumed-product.dto';
 import { CreateDiaryDto } from './dto/create-diary.dto';
+import { DeleteDayDto } from './dto/delete-day.dto';
 
 @Injectable()
 export class DiaryService {
@@ -12,27 +17,62 @@ export class DiaryService {
     @InjectModel(Diary.name) private readonly diaryModel: Model<DiaryDocument>,
   ) {}
 
-  async findProductByDateAndUser(date: string, userId: Types.ObjectId) {
-    return this.diaryModel.findOne({ date, owner: userId }).exec();
+  async findDiaryEntry(
+    date: string,
+    userId: Types.ObjectId,
+  ): Promise<DiaryDocument> {
+    const diaryEntry = await this.diaryModel
+      .findOne({ date, owner: userId })
+      .exec();
+    if (!diaryEntry) {
+      throw new NotFoundException(
+        `Diary entry not found for userId: ${userId} on date: ${date}`,
+      );
+    }
+    return diaryEntry;
   }
+  async deleteDiaryDay(deleteDayDto: DeleteDayDto) {
+    const { _id } = deleteDayDto;
+    const objectId = Types.ObjectId.isValid(_id)
+      ? new Types.ObjectId(_id)
+      : null;
 
-  async findProductById(id: string) {
-    const product = { _id: id, title: { en: 'Sample Product' }, kcal: 100 };
-    return product;
+    const result = await this.diaryModel.deleteOne({ _id: objectId });
+    console.log(result);
+
+    if (result.deletedCount > 0) {
+      return { message: 'Diary entry successfully deleted.' };
+    } else {
+      throw new NotFoundException('Diary entry not found or already deleted.');
+    }
   }
 
   async addProduct(
-    userId: string,
+    userId: Types.ObjectId,
     date: string,
     createDiaryDto: CreateDiaryDto,
   ): Promise<DiaryDocument> {
-    const { consumedProducts } = createDiaryDto;
     if (!userId) {
-      throw new NotFoundException('Please check userId!');
+      throw new BadRequestException('Invalid userId provided.');
     }
-    const diaryEntry = await this.createNewDate(userId, date);
 
-    consumedProducts.forEach((product: ConsumedProductDto) => {
+    const diaryEntry = await this.findDiaryEntry(date, userId).catch(
+      async () => {
+        return this.createNewDiaryEntry(userId, date);
+      },
+    );
+
+    const { consumedProducts } = createDiaryDto;
+    this.updateDiaryEntry(diaryEntry, consumedProducts);
+
+    return await diaryEntry.save();
+  }
+
+  private updateDiaryEntry(
+    diaryEntry: DiaryDocument,
+    consumedProducts: ConsumedProductDto[],
+  ) {
+    consumedProducts.forEach((product) => {
       const existingProduct = diaryEntry.consumedProducts.find(
         (p) => p._id === product._id,
       );
@@ -44,25 +84,24 @@ export class DiaryService {
         diaryEntry.consumedProducts.push(product);
       }
     });
+
     diaryEntry.total += consumedProducts.reduce(
       (sum, product) => sum + product.kcal,
       0,
     );
-
-    return await diaryEntry.save();
   }
 
-  async getInfoPerDate(userId: any, date: string) {
-    let diaryEntry = await this.findProductByDateAndUser(date, userId);
-
-    if (!diaryEntry) {
-      diaryEntry = await this.createNewDate(userId, date);
-    }
-
-    return diaryEntry;
+  async getInfoPerDate(
+    userId: Types.ObjectId,
+    date: string,
+  ): Promise<DiaryDocument> {
+    return this.findDiaryEntry(date, userId);
   }
 
-  async createNewDate(userId: any, date: string) {
+  private async createNewDiaryEntry(
+    userId: Types.ObjectId,
+    date: string,
+  ): Promise<DiaryDocument> {
     const newDiaryEntry = new this.diaryModel({
       date,
       owner: userId,
@@ -70,32 +109,30 @@ export class DiaryService {
       total: 0,
     });
 
-    await newDiaryEntry.save();
-    return newDiaryEntry;
+    return await newDiaryEntry.save();
   }
 
-  async removeProduct(userId: any, productId: string, date: string) {
-    const diaryEntry = await this.findProductByDateAndUser(date, userId);
+  async removeProduct(
+    userId: Types.ObjectId,
+    productId: string,
+    date: string,
+  ): Promise<any> {
+    const diaryEntry = await this.findDiaryEntry(date, userId);
 
-    if (!diaryEntry) {
-      throw new NotFoundException('Diary entry not found');
-    }
-
-    const product = diaryEntry.consumedProducts.find(
+    const productIndex = diaryEntry.consumedProducts.findIndex(
       (p) => p._id === productId,
     );
-
-    if (!product) {
+    if (productIndex === -1) {
       throw new NotFoundException('Product not found in diary');
     }
 
-    diaryEntry.consumedProducts = diaryEntry.consumedProducts.filter(
-      (p) => p._id !== productId,
+    const [removedProduct] = diaryEntry.consumedProducts.splice(
+      productIndex,
+      1,
     );
-    diaryEntry.total -= product.kcal;
+    diaryEntry.total -= removedProduct.kcal;
 
     await diaryEntry.save();
-
-    return product;
+    return removedProduct;
   }
 }
